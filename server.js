@@ -1,24 +1,17 @@
-const express = require('express');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
-const app = express();
-app.use(express.json());
+// ... ה-Express שלך
 
-// API לשמירת מיקום
-app.post('/collect-location', (req, res) => {
-  const entry = { receivedAt: new Date().toISOString(), ...req.body };
-  fs.appendFileSync(path.join(__dirname, 'locations.log'), JSON.stringify(entry) + '\n');
-  res.sendStatus(200);
+app.get('/locations', (req, res) => {
+  try {
+    const file = path.join(__dirname, 'locations.log');
+    if (!fs.existsSync(file)) return res.json([]); // אין נתונים עדיין
+    const data = fs.readFileSync(file, 'utf8');
+    const lines = data.trim() ? data.trim().split('\n').map(JSON.parse) : [];
+    res.json(lines);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'failed to read locations' });
+  }
 });
-
-// סטטי
-app.use(express.static(path.join(__dirname, 'public')));
-
-// מיפוי root (אם אין index.html)
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'TrackingLocation.html')); // או index.html אם קיים
-});
-
-const PORT = 3000;
-app.listen(PORT, () => console.log(`listening on http://localhost:${PORT}`));
