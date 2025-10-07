@@ -5,6 +5,19 @@ const fs = require('fs');
 
 const app = express();
 
+import fetch from 'node-fetch';
+
+app.use(async (req, res, next) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+  try {
+    const geo = await fetch(`https://ipapi.co/${ip}/json/`).then(r => r.json());
+    console.log(`🌎 ${ip} — ${geo.city}, ${geo.country_name}`);
+  } catch {
+    console.log(`🌎 ${ip} — (could not resolve location)`);
+  }
+  next();
+});
+
 // Middlewares
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
